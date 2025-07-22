@@ -1,16 +1,15 @@
-## Hi there 👋
+Hi, I'm **Phu** — I code, I lift, and I learn.  
+Fullstack dev who enjoys building side projects, exploring new tech, and pushing limits.
 
-<!--
-**lthphuw/lthphuw** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
+## Tech I Use
+- **Golang**
+- **Typescript**
+- **Python**
 
-Here are some ideas to get you started:
+## What Drives Me
+Always learning — from open source, real-world problems, or just messing around with ideas.  
+Love clean code, simple solutions, and a good chest day.  
 
-- 🔭 I’m currently working on ...
-- 🌱 I’m currently learning ...
-- 👯 I’m looking to collaborate on ...
-- 🤔 I’m looking for help with ...
-- 💬 Ask me about ...
-- 📫 How to reach me: ...
-- 😄 Pronouns: ...
-- ⚡ Fun fact: ...
--->
+## // ready for handshake()
+- [lthphuw@gmail.com](mailto:lthphuw@gmail.com)  
+- [linkedin.com/in/phu-lth](https://www.linkedin.com/in/phu-lth)
