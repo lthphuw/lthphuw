@@ -1,8 +1,7 @@
-## README.md
 
 Hi, I'm **Phu** — I work on computer vision, and build the systems around it.
 
-## Open source
+## Contributions
 
 <!-- os:start -->
 **[roboflow/rf-detr](https://github.com/roboflow/rf-detr/pulls?q=is%3Apr+is%3Amerged+author%3Althphuw)** ★9.6k
