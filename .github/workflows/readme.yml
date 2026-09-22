@@ -1,0 +1,34 @@
+name: readme
+
+on:
+  schedule:
+    # 03:00 UTC daily
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      # A PAT is used for both checkout and push so the resulting commit counts
+      # as repository activity. Commits made with GITHUB_TOKEN do not, and
+      # GitHub disables scheduled workflows after 60 days without activity.
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT }}
+
+      - run: python3 .github/render.py
+        env:
+          GH_TOKEN: ${{ secrets.PAT }}
+
+      - name: Commit if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git diff --quiet README.md || {
+            git commit -am "chore: refresh open source"
+            git push
+          }
