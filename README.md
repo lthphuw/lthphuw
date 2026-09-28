@@ -14,8 +14,3 @@ Hi, I'm **Phu** — I work on computer vision, and build the systems around it.
 **[sunsmarterjie/yolov12](https://github.com/sunsmarterjie/yolov12/pulls?q=is%3Apr+is%3Amerged+author%3Althphuw)** · ★3k · 1 merged · ${\color{forestgreen}\textsf{+1}}\ {\color{indianred}\textsf{−1}}$
 - Fix DataLoader collate crash when a batch mixes background and labelled images · [#174](https://github.com/sunsmarterjie/yolov12/pull/174) · ${\color{forestgreen}\textsf{+1}}\ {\color{indianred}\textsf{−1}}$
 <!-- os:end -->
-
-### Projects
-
-**[byte-of-me](https://github.com/lthphuw/byte-of-me)** · Next.js · TypeScript<br>
-My site and its own CMS. Bilingual, with a private notes workspace.
