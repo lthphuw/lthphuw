@@ -18,10 +18,29 @@ END = "<!-- os:end -->"
 AUTHOR = "lthphuw"
 # Merged pull requests the author opened against somebody else's repository.
 SEARCH = f"is:pr is:merged author:{AUTHOR} -user:{AUTHOR}"
-LIMIT = 8
+# The search API caps one page at 100; past that the per-repository counts
+# undercount and a global link covers the rest.
+LIMIT = 100
+# Pull requests listed per repository; the rest collapse into a "+N more" link
+# that belongs to that repository.
+SHOW = 5
 
 # Any rendered star count, used to compare two blocks while ignoring stars.
 STARS = re.compile(r"★[\d.]+k?")
+
+# GitHub strips CSS and <font> from Markdown, so inline math is the only way
+# to colour text. Named colours, not hex: some renderers (KaTeX, IDE previews)
+# reject "#" inside math. One colour has to serve both themes, and these two
+# keep roughly 4:1 contrast on light and on dark.
+# Both numbers sit in one formula so a narrow screen cannot wrap between them.
+DIFF = r"${\color{forestgreen}\textsf{+%s}}\ {\color{indianred}\textsf{−%s}}$"
+
+# Conventional-commit prefix such as "fix(export): ". The type is dropped and
+# the scope moves into the metadata after the title.
+PREFIX = re.compile(
+    r"^(?:feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)"
+    r"(?:\((?P<scope>[^)]*)\))?!?:\s*"
+)
 
 QUERY = """
 query($q: String!, $n: Int!) {
@@ -32,6 +51,7 @@ query($q: String!, $n: Int!) {
         number
         title
         url
+        mergedAt
         additions
         deletions
         repository { nameWithOwner stargazerCount }
@@ -58,6 +78,21 @@ def stars(n):
     return f"{n / 1000:.1f}".removesuffix(".0") + "k"
 
 
+def split_title(title):
+    m = PREFIX.match(title)
+    if not m:
+        return title, None
+    rest = title[m.end():]
+    # Capitalise "keep fp16 ..." but leave "iOS ..." alone.
+    if rest.split(" ", 1)[0].islower():
+        rest = rest[:1].upper() + rest[1:]
+    return rest, m["scope"]
+
+
+def diff(additions, deletions):
+    return DIFF % (f"{additions:,}", f"{deletions:,}")
+
+
 def repo_url(repo):
     q = urllib.parse.quote_plus(f"is:pr is:merged author:{AUTHOR}")
     return f"https://github.com/{repo}/pulls?q={q}"
@@ -69,6 +104,8 @@ def all_url():
 
 
 def render(prs, total):
+    # Newest merge first, so repositories are ordered by their latest merge.
+    prs = sorted(prs, key=lambda pr: pr["mergedAt"], reverse=True)
     groups = {}
     for pr in prs:
         groups.setdefault(pr["repository"]["nameWithOwner"], []).append(pr)
@@ -76,19 +113,26 @@ def render(prs, total):
     chunks = []
     for repo, items in groups.items():
         star = stars(items[0]["repository"]["stargazerCount"])
-        lines = [f"**[{repo}]({repo_url(repo)})** ★{star}"]
-        lines += [
-            f'- [#{pr["number"]}]({pr["url"]}) — {pr["title"]} '
-            f'`+{pr["additions"]} −{pr["deletions"]}`'
-            for pr in items
-        ]
+        churn = diff(sum(pr["additions"] for pr in items),
+                     sum(pr["deletions"] for pr in items))
+        lines = [f"**[{repo}]({repo_url(repo)})** · ★{star} · "
+                 f"{len(items)} merged · {churn}"]
+        for pr in items[:SHOW]:
+            title, scope = split_title(pr["title"])
+            meta = [scope] if scope else []
+            meta += [f'[#{pr["number"]}]({pr["url"]})',
+                     diff(pr["additions"], pr["deletions"])]
+            lines.append(f'- {title} · {" · ".join(meta)}')
+        hidden = len(items) - SHOW
+        if hidden > 0:
+            lines.append(f"- [+{hidden} more →]({repo_url(repo)})")
         chunks.append("\n".join(lines))
 
-    # Without this the pull requests past LIMIT would just vanish, and the
-    # section would read as the complete list of contributions.
-    hidden = total - len(prs)
-    if hidden > 0:
-        chunks.append(f"[+{hidden} more merged pull requests]({all_url()})")
+    # Only reachable past LIMIT: those pull requests were never fetched, so
+    # they cannot be attributed to a repository.
+    unfetched = total - len(prs)
+    if unfetched > 0:
+        chunks.append(f"[+{unfetched} more merged pull requests]({all_url()})")
     return "\n\n".join(chunks)
 
 
