@@ -55,8 +55,10 @@ DIFF_SVG = re.compile(rf"{DIFF_DIR}/(\d+)-(\d+)\.svg")
 REPO_DIR = "assets/repo"
 TITLE_SIZE = 15
 META_SIZE = 13
-TITLE_HEIGHT = 30
-TITLE_BASE = 19          # shared baseline of every text on the title line
+# Just tall enough for the text and its descenders: anything more is blank
+# space between the title and the first pull request below it.
+TITLE_HEIGHT = 22
+TITLE_BASE = 16          # shared baseline of every text on the title line
 TITLE_GAP = 8            # between the repository name and the star
 STAR_R = 6.5             # outer radius of the star
 # Room kept for the star count whatever it is. A width that followed the text
@@ -208,9 +210,12 @@ def title(repo, star, merged, additions, deletions):
     # Two images, two links: an image can only carry one. The right one floats
     # and comes second, so on a screen too narrow for both it drops under the
     # left one instead of pushing it out of the way. The clearing break keeps
-    # the pull request list from wrapping around it when it does.
+    # the pull request list from wrapping around it when it does. align="top"
+    # stops the left image sitting on the text baseline, which would leave a
+    # strip of empty line below it.
     line = (
-        f'[<img src="{REPO_DIR}/{slug}.svg" width="{lw}" height="{TITLE_HEIGHT}" '
+        f'[<img src="{REPO_DIR}/{slug}.svg" align="top" width="{lw}" '
+        f'height="{TITLE_HEIGHT}" '
         f'alt="{repo}, ★{star}">](https://github.com/{repo})'
         f'[<img src="{REPO_DIR}/{slug}.pr.svg" align="right" width="{rw}" '
         f'height="{TITLE_HEIGHT}" alt="{merged} merged, +{additions} −{deletions}">]'
@@ -248,15 +253,22 @@ def all_url():
 
 
 def render(prs, total):
-    # Newest merge first, so repositories are ordered by their latest merge.
+    # Newest merge first, which orders the pull requests inside a repository.
     prs = sorted(prs, key=lambda pr: pr["mergedAt"], reverse=True)
     groups = {}
     for pr in prs:
         groups.setdefault(pr["repository"]["nameWithOwner"], []).append(pr)
 
+    # Most merged pull requests first, then most stars. sorted() is stable and
+    # the groups were created in order of their latest merge, so that is what
+    # breaks a tie in both.
+    ranked = sorted(groups.items(),
+                    key=lambda g: (-len(g[1]),
+                                   -g[1][0]["repository"]["stargazerCount"]))
+
     chunks = []
     titles = {}
-    for repo, items in groups.items():
+    for repo, items in ranked:
         star = stars(items[0]["repository"]["stargazerCount"])
         added = sum(pr["additions"] for pr in items)
         removed = sum(pr["deletions"] for pr in items)

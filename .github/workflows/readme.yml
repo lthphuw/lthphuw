@@ -1,13 +1,26 @@
 name: readme
 
 on:
+  push:
+    branches: [main]
+    # The refresh commits README.md and assets with a PAT, which fires this
+    # trigger again; ignoring what it writes stops that second, empty run.
+    paths-ignore:
+      - README.md
+      - assets/**
   schedule:
-    # 03:00 UTC daily
-    - cron: "0 3 * * *"
+    # 06:00 in Vietnam (UTC+7) is 23:00 UTC the day before. GitHub starts
+    # scheduled runs late, sometimes by hours.
+    - cron: "0 23 * * *"
   workflow_dispatch:
 
 permissions:
   contents: write
+
+# Two runs at once would race to push the same files.
+concurrency:
+  group: readme
+  cancel-in-progress: false
 
 jobs:
   refresh:
