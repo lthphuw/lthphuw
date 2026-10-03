@@ -5,6 +5,7 @@ Only the text between <!-- os:start --> and <!-- os:end --> is touched, so any
 pinned lines written by hand above the marker survive untouched.
 """
 
+import hashlib
 import json
 import math
 import pathlib
@@ -50,8 +51,7 @@ HEIGHT = 12
 BASELINE = HEIGHT - 0.8
 DIFF_SVG = re.compile(rf"{DIFF_DIR}/(\d+)-(\d+)\.svg")
 
-# Two SVGs per repository for its title line. Named by repository, not by
-# content, so a star count drifting changes the file but never the README text.
+# Two SVGs per repository for its title line, named by content (see title()).
 REPO_DIR = "assets/repo"
 TITLE_SIZE = 15
 META_SIZE = 13
@@ -202,11 +202,22 @@ text {{ font: 500 {META_SIZE}px {MONO}; fill: #59636e; }}
 """, width
 
 
+def short_hash(svg):
+    return hashlib.sha1(svg.encode("utf-8")).hexdigest()[:8]
+
+
 def title(repo, star, merged, additions, deletions):
     """The title line's Markdown, and the SVGs it references by file name."""
     slug = title_slug(repo)
     left, lw = title_left(repo, star)
     right, rw = title_right(merged, additions, deletions)
+    # Named by content, so an image that changes is a new URL. GitHub serves
+    # raw files with max-age=300: under an unchanged name, a cached old copy
+    # gets squeezed into the new width and height for minutes. The star count
+    # is left out of the hash so that drifting stars stay invisible to the
+    # README, which is what main() relies on.
+    left_name = f"{slug}.{short_hash(title_left(repo, '')[0])}.svg"
+    right_name = f"{slug}.pr.{short_hash(right)}.svg"
     # Two images, two links: an image can only carry one. The right one floats
     # and comes second, so on a screen too narrow for both it drops under the
     # left one instead of pushing it out of the way. The clearing break keeps
@@ -214,14 +225,13 @@ def title(repo, star, merged, additions, deletions):
     # stops the left image sitting on the text baseline, which would leave a
     # strip of empty line below it.
     line = (
-        f'[<img src="{REPO_DIR}/{slug}.svg" align="top" width="{lw}" '
-        f'height="{TITLE_HEIGHT}" '
-        f'alt="{repo}, ★{star}">](https://github.com/{repo})'
-        f'[<img src="{REPO_DIR}/{slug}.pr.svg" align="right" width="{rw}" '
+        f'[<img src="{REPO_DIR}/{left_name}" align="top" width="{lw}" '
+        f'height="{TITLE_HEIGHT}" alt="{repo}, ★{star}">](https://github.com/{repo})'
+        f'[<img src="{REPO_DIR}/{right_name}" align="right" width="{rw}" '
         f'height="{TITLE_HEIGHT}" alt="{merged} merged, +{additions} −{deletions}">]'
         f'({repo_url(repo)})<br clear="all">'
     )
-    return line, {f"{slug}.svg": left, f"{slug}.pr.svg": right}
+    return line, {left_name: left, right_name: right}
 
 
 def sync_dir(subdir, wanted):
