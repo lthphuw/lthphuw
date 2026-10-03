@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="253" height="30">
+<svg xmlns="http://www.w3.org/2000/svg" width="253" height="22">
 <style>
 text { font-family: ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace; }
 .o { font-size: 15px; fill: #59636e; }
@@ -10,8 +10,8 @@ text { font-family: ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Libera
   .c { fill: #9198a1; }
 }
 </style>
-<text class="o" x="0" y="19" textLength="126" lengthAdjust="spacing">sunsmarterjie/</text>
-<text class="n" x="126" y="19" textLength="63" lengthAdjust="spacing">yolov12</text>
-<polygon class="s" points="203.50,7.10 204.96,11.59 209.68,11.59 205.86,14.37 207.32,18.86 203.50,16.08 199.68,18.86 201.14,14.37 197.32,11.59 202.04,11.59"/>
-<text class="c" x="214" y="19">3k</text>
+<text class="o" x="0" y="16" textLength="126" lengthAdjust="spacing">sunsmarterjie/</text>
+<text class="n" x="126" y="16" textLength="63" lengthAdjust="spacing">yolov12</text>
+<polygon class="s" points="203.50,4.10 204.96,8.59 209.68,8.59 205.86,11.37 207.32,15.86 203.50,13.08 199.68,15.86 201.14,11.37 197.32,8.59 202.04,8.59"/>
+<text class="c" x="214" y="16">3k</text>
 </svg>
