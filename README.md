@@ -1,6 +1,6 @@
 ### Abstract
 
-I'm **Phu**. I work on computer vision and build the systems around it. Most of my open-source work is in object detection and tracking: fixes to training, export and data loading.
+I'm **Phu**. I work on computer vision and build the systems around it.
 
 ### Contributions
 
