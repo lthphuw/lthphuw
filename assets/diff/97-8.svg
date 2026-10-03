@@ -1,9 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="43.2" height="21" viewBox="0 0 43.2 21">
+<svg xmlns="http://www.w3.org/2000/svg" width="52" height="21" viewBox="0 0 52 21">
 <style>
-text { font: 500 12px ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace; }
+.t { font: 500 11px ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace; }
+.p { fill: #f6f8fa; stroke: #d1d9e0; }
 .a { fill: #1a7f37; } .d { fill: #d1242f; }
-@media (prefers-color-scheme: dark) { .a { fill: #3fb950; } .d { fill: #f85149; } }
+@media (prefers-color-scheme: dark) {
+  .p { fill: #151b23; stroke: #3d444d; }
+  .a { fill: #3fb950; } .d { fill: #f85149; }
+}
 </style>
-<text class="a" x="0" y="15.5" textLength="21.6" lengthAdjust="spacing">+97</text>
-<text class="d" x="28.8" y="15.5" textLength="14.4" lengthAdjust="spacing">−8</text>
+<rect class="p" x="0.5" y="3.5" width="51" height="15" rx="7.5"/>
+<text class="t" x="6" y="14.96"><tspan class="a">+97</tspan><tspan class="d" dx="6.6">−8</tspan></text>
 </svg>
