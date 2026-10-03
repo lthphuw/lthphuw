@@ -55,9 +55,10 @@ DIFF_SVG = re.compile(rf"{DIFF_DIR}/(\d+)-(\d+)\.svg")
 REPO_DIR = "assets/repo"
 TITLE_SIZE = 15
 META_SIZE = 13
-# Just tall enough for the text and its descenders: anything more is blank
-# space between the title and the first pull request below it.
-TITLE_HEIGHT = 22
+# The title is not wrapped in a paragraph (see title()), so nothing but this
+# height separates it from the first pull request below: the strip under
+# the text and its descenders is the whole gap.
+TITLE_HEIGHT = 24
 TITLE_BASE = 16          # shared baseline of every text on the title line
 TITLE_GAP = 8            # between the repository name and the star
 STAR_R = 6.5             # outer radius of the star
@@ -223,13 +224,18 @@ def title(repo, star, merged, additions, deletions):
     # left one instead of pushing it out of the way. The clearing break keeps
     # the pull request list from wrapping around it when it does. align="top"
     # stops the left image sitting on the text baseline, which would leave a
-    # strip of empty line below it.
+    # strip of empty line below it. A <div> rather than Markdown: a paragraph
+    # gets a 16px bottom margin from GitHub, a div gets none, and the gap to
+    # the list is then the one chosen above. Markdown is not parsed inside it,
+    # hence the anchors.
     line = (
-        f'[<img src="{REPO_DIR}/{left_name}" align="top" width="{lw}" '
-        f'height="{TITLE_HEIGHT}" alt="{repo}, ★{star}">](https://github.com/{repo})'
-        f'[<img src="{REPO_DIR}/{right_name}" align="right" width="{rw}" '
-        f'height="{TITLE_HEIGHT}" alt="{merged} merged, +{additions} −{deletions}">]'
-        f'({repo_url(repo)})<br clear="all">'
+        f'<div><a href="https://github.com/{repo}">'
+        f'<img src="{REPO_DIR}/{left_name}" align="top" width="{lw}" '
+        f'height="{TITLE_HEIGHT}" alt="{repo}, ★{star}"></a>'
+        f'<a href="{repo_url(repo)}">'
+        f'<img src="{REPO_DIR}/{right_name}" align="right" width="{rw}" '
+        f'height="{TITLE_HEIGHT}" alt="{merged} merged, +{additions} −{deletions}">'
+        f'</a><br clear="all"></div>'
     )
     return line, {left_name: left, right_name: right}
 
@@ -284,7 +290,8 @@ def render(prs, total):
         removed = sum(pr["deletions"] for pr in items)
         line, svgs = title(repo, star, len(items), added, removed)
         titles.update(svgs)
-        lines = [line]
+        # The blank line ends the HTML block; without it the list is swallowed.
+        lines = [line, ""]
         for pr in items[:SHOW]:
             # Number first, in code font: within a repository the numbers share
             # a width, so they line up into a column like a changelog.
