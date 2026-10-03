@@ -6,6 +6,7 @@ pinned lines written by hand above the marker survive untouched.
 """
 
 import json
+import math
 import pathlib
 import re
 import subprocess
@@ -48,6 +49,20 @@ HEIGHT = 12
 # around them instead of bottom-aligning them.
 BASELINE = HEIGHT - 0.8
 DIFF_SVG = re.compile(rf"{DIFF_DIR}/(\d+)-(\d+)\.svg")
+
+# Two SVGs per repository for its title line. Named by repository, not by
+# content, so a star count drifting changes the file but never the README text.
+REPO_DIR = "assets/repo"
+TITLE_SIZE = 15
+META_SIZE = 13
+TITLE_HEIGHT = 30
+TITLE_BASE = 19          # shared baseline of every text on the title line
+TITLE_GAP = 8            # between the repository name and the star
+STAR_R = 6.5             # outer radius of the star
+# Room kept for the star count whatever it is. A width that followed the text
+# would change the README whenever 9.9k became 10k, which the star-drift rule
+# in main() exists to avoid.
+STAR_CHARS = 5
 
 QUERY = """
 query($q: String!, $n: Int!) {
@@ -116,17 +131,110 @@ lengthAdjust="spacing">{removed}</text>
 """
 
 
-def sync_svgs(block):
-    """Write the SVGs the block references and delete the ones it no longer does."""
-    out = ROOT / DIFF_DIR
+def star_points(cx, cy, r):
+    inner = r * 0.382
+    pts = []
+    for i in range(10):
+        radius = r if i % 2 == 0 else inner
+        angle = math.pi * i / 5 - math.pi / 2
+        pts.append(f"{cx + radius * math.cos(angle):.2f},"
+                   f"{cy + radius * math.sin(angle):.2f}")
+    return " ".join(pts)
+
+
+def title_slug(repo):
+    return repo.replace("/", "--")
+
+
+def title_left(repo, star):
+    """Repository name and stars: the group that sits against the left edge."""
+    owner, name = repo.split("/")
+    char = 0.6 * TITLE_SIZE
+    wo, wn = (len(owner) + 1) * char, len(name) * char
+    star_cx = wo + wn + TITLE_GAP + STAR_R
+    star_cy = TITLE_BASE - 0.36 * TITLE_SIZE
+    count_x = star_cx + STAR_R + 4
+    width = math.ceil(count_x + STAR_CHARS * 0.6 * META_SIZE)
+    return f"""\
+<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{TITLE_HEIGHT}">
+<style>
+text {{ font-family: {MONO}; }}
+.o {{ font-size: {TITLE_SIZE}px; fill: #59636e; }}
+.n {{ font-size: {TITLE_SIZE}px; font-weight: 700; fill: #1f2328; }}
+.s {{ fill: #9a6700; }}
+.c {{ font-size: {META_SIZE}px; font-weight: 500; fill: #59636e; }}
+@media (prefers-color-scheme: dark) {{
+  .o {{ fill: #9198a1; }} .n {{ fill: #f0f6fc; }} .s {{ fill: #e3b341; }}
+  .c {{ fill: #9198a1; }}
+}}
+</style>
+<text class="o" x="0" y="{TITLE_BASE}" textLength="{wo:g}" \
+lengthAdjust="spacing">{owner}/</text>
+<text class="n" x="{wo:g}" y="{TITLE_BASE}" textLength="{wn:g}" \
+lengthAdjust="spacing">{name}</text>
+<polygon class="s" points="{star_points(star_cx, star_cy, STAR_R)}"/>
+<text class="c" x="{count_x:g}" y="{TITLE_BASE}">{star}</text>
+</svg>
+""", width
+
+
+def title_right(merged, additions, deletions):
+    """Merged count and diff: one group, anchored at its own right edge."""
+    char = 0.6 * META_SIZE
+    chars = len(f"{merged} merged") + len(f"+{additions}") + len(f"−{deletions}")
+    # 12 and 6 are the gaps drawn below; the slack absorbs font width spread.
+    width = math.ceil(chars * char + 12 + 6 + 4)
+    return f"""\
+<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{TITLE_HEIGHT}">
+<style>
+text {{ font: 500 {META_SIZE}px {MONO}; fill: #59636e; }}
+.a {{ fill: #1a7f37; }} .d {{ fill: #d1242f; }}
+@media (prefers-color-scheme: dark) {{
+  text {{ fill: #9198a1; }} .a {{ fill: #3fb950; }} .d {{ fill: #f85149; }}
+}}
+</style>
+<text x="{width}" y="{TITLE_BASE}" text-anchor="end">{merged} merged\
+<tspan class="a" dx="12">+{additions}</tspan>\
+<tspan class="d" dx="6">−{deletions}</tspan></text>
+</svg>
+""", width
+
+
+def title(repo, star, merged, additions, deletions):
+    """The title line's Markdown, and the SVGs it references by file name."""
+    slug = title_slug(repo)
+    left, lw = title_left(repo, star)
+    right, rw = title_right(merged, additions, deletions)
+    # Two images, two links: an image can only carry one. The right one floats
+    # and comes second, so on a screen too narrow for both it drops under the
+    # left one instead of pushing it out of the way. The clearing break keeps
+    # the pull request list from wrapping around it when it does.
+    line = (
+        f'[<img src="{REPO_DIR}/{slug}.svg" width="{lw}" height="{TITLE_HEIGHT}" '
+        f'alt="{repo}, ★{star}">](https://github.com/{repo})'
+        f'[<img src="{REPO_DIR}/{slug}.pr.svg" align="right" width="{rw}" '
+        f'height="{TITLE_HEIGHT}" alt="{merged} merged, +{additions} −{deletions}">]'
+        f'({repo_url(repo)})<br clear="all">'
+    )
+    return line, {f"{slug}.svg": left, f"{slug}.pr.svg": right}
+
+
+def sync_dir(subdir, wanted):
+    """Write the SVGs wanted in subdir and delete the ones it no longer wants."""
+    out = ROOT / subdir
     out.mkdir(parents=True, exist_ok=True)
-    wanted = {f"{a}-{d}.svg": diff_svg(int(a), int(d))
-              for a, d in DIFF_SVG.findall(block)}
     for path in out.glob("*.svg"):
         if path.name not in wanted:
             path.unlink()
     for name, svg in wanted.items():
         (out / name).write_text(svg, encoding="utf-8")
+
+
+def sync_svgs(block, titles):
+    """Write the SVGs the block references; drop the ones it no longer does."""
+    sync_dir(DIFF_DIR, {f"{a}-{d}.svg": diff_svg(int(a), int(d))
+                        for a, d in DIFF_SVG.findall(block)})
+    sync_dir(REPO_DIR, titles)
 
 
 def repo_url(repo):
@@ -147,12 +255,14 @@ def render(prs, total):
         groups.setdefault(pr["repository"]["nameWithOwner"], []).append(pr)
 
     chunks = []
+    titles = {}
     for repo, items in groups.items():
         star = stars(items[0]["repository"]["stargazerCount"])
-        churn = diff(sum(pr["additions"] for pr in items),
-                     sum(pr["deletions"] for pr in items), repo_url(repo))
-        lines = [SEP.join([f"**[{repo}]({repo_url(repo)})**", f"★{star}",
-                           f"{len(items)} merged", churn])]
+        added = sum(pr["additions"] for pr in items)
+        removed = sum(pr["deletions"] for pr in items)
+        line, svgs = title(repo, star, len(items), added, removed)
+        titles.update(svgs)
+        lines = [line]
         for pr in items[:SHOW]:
             # Number first, in code font: within a repository the numbers share
             # a width, so they line up into a column like a changelog.
@@ -169,7 +279,7 @@ def render(prs, total):
     unfetched = total - len(prs)
     if unfetched > 0:
         chunks.append(f"[+{unfetched} more merged pull requests]({all_url()})")
-    return "\n\n".join(chunks)
+    return "\n\n".join(chunks), titles
 
 
 def main():
@@ -186,7 +296,8 @@ def main():
         print(f"markers {START} / {END} not found in README.md", file=sys.stderr)
         return 1
 
-    block = f"{START}\n{render(prs, total)}\n{END}"
+    body, titles = render(prs, total)
+    block = f"{START}\n{body}\n{END}"
 
     # Star counts drift on their own, with no work from us. Left alone that
     # would commit a new README most days just to move ★9.6k to ★9.7k, so a
@@ -199,7 +310,7 @@ def main():
     # lambda replacement: PR titles may contain backslashes, which re.sub would
     # otherwise interpret as escape sequences.
     README.write_text(pattern.sub(lambda _: block, text), encoding="utf-8")
-    sync_svgs(block)
+    sync_svgs(block, titles)
     print(f"rendered {len(prs)} of {total} pull requests")
     return 0
 
