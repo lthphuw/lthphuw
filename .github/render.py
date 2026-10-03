@@ -43,13 +43,21 @@ STARS = re.compile(r"★[\d.]+k?")
 # absorbs the small spread between fonts (Consolas 0.55em, most others 0.6em).
 MONO = ("ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,"
         "'Liberation Mono',monospace")
-SIZE = 12      # px, a notch under the 14px profile text
-# The image floats to the right edge, so its top meets the top of a text line,
-# not the baseline. It is as tall as one line of the profile text (21px) and the
-# digits sit on that line's baseline, which puts them level with the text
-# beside them.
+# The diff sits in a small rounded badge, the same one in a row and in a title.
+BADGE_SIZE = 11   # px, a size under the 14px profile text
+BADGE_H = 16
+BADGE_PAD = 6     # inside the badge, left and right
+# A row's image floats to the right edge, so its top meets the top of a text
+# line, not the baseline. It is as tall as one line of the profile text (21px)
+# and the badge is centred on that line, level with the text beside it.
 HEIGHT = 21
-BASELINE = 15.5
+BADGE_CSS = """\
+.p { fill: #f6f8fa; stroke: #d1d9e0; }
+.a { fill: #1a7f37; } .d { fill: #d1242f; }
+@media (prefers-color-scheme: dark) {
+  .p { fill: #151b23; stroke: #3d444d; }
+  .a { fill: #3fb950; } .d { fill: #f85149; }
+}"""
 DIFF_SVG = re.compile(rf"{DIFF_DIR}/(\d+)-(\d+)\.svg")
 
 # Two SVGs per repository for its title line, named by content (see title()).
@@ -112,26 +120,38 @@ def diff(additions, deletions, url):
     return f'[<img src="{src}" align="right" alt="{alt}">]({url})'
 
 
+def badge_width(additions, deletions):
+    # No thousands separator: at this size a monospace comma reads as a full
+    # stop.
+    chars = len(f"+{additions}") + 1 + len(f"−{deletions}")
+    return math.ceil(chars * 0.6 * BADGE_SIZE + 2 * BADGE_PAD)
+
+
+def badge(x, centre, additions, deletions):
+    """A rounded box holding the diff, its left edge at x and its middle at
+    centre. Colours are GitHub's diff green and red; prefers-color-scheme
+    follows the viewer's system theme, which GitHub's default theme follows."""
+    char = 0.6 * BADGE_SIZE
+    width = badge_width(additions, deletions)
+    top = centre - BADGE_H / 2
+    return (
+        f'<rect class="p" x="{x + 0.5:g}" y="{top + 0.5:g}" width="{width - 1}" '
+        f'height="{BADGE_H - 1}" rx="{(BADGE_H - 1) / 2:g}"/>\n'
+        f'<text class="t" x="{x + BADGE_PAD:g}" y="{centre + 0.36 * BADGE_SIZE:g}">'
+        f'<tspan class="a">+{additions}</tspan>'
+        f'<tspan class="d" dx="{char:g}">−{deletions}</tspan></text>')
+
+
 def diff_svg(additions, deletions):
-    # No thousands separator: at 12px a monospace comma reads as a full stop.
-    added, removed = f"+{additions}", f"−{deletions}"
-    char = 0.6 * SIZE
-    wa, wr = len(added) * char, len(removed) * char
-    width = wa + char + wr
-    # Colours are GitHub's diff green and red. prefers-color-scheme follows the
-    # viewer's system theme, which is what GitHub's default theme follows too.
+    width = badge_width(additions, deletions)
     return f"""\
-<svg xmlns="http://www.w3.org/2000/svg" width="{width:g}" height="{HEIGHT}" \
-viewBox="0 0 {width:g} {HEIGHT}">
+<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{HEIGHT}" \
+viewBox="0 0 {width} {HEIGHT}">
 <style>
-text {{ font: 500 {SIZE}px {MONO}; }}
-.a {{ fill: #1a7f37; }} .d {{ fill: #d1242f; }}
-@media (prefers-color-scheme: dark) {{ .a {{ fill: #3fb950; }} .d {{ fill: #f85149; }} }}
+.t {{ font: 500 {BADGE_SIZE}px {MONO}; }}
+{BADGE_CSS}
 </style>
-<text class="a" x="0" y="{BASELINE:g}" textLength="{wa:g}" \
-lengthAdjust="spacing">{added}</text>
-<text class="d" x="{wa + char:g}" y="{BASELINE:g}" textLength="{wr:g}" \
-lengthAdjust="spacing">{removed}</text>
+{badge(0, HEIGHT / 2 + 0.5, additions, deletions)}
 </svg>
 """
 
@@ -184,23 +204,23 @@ lengthAdjust="spacing">{name}</text>
 
 
 def title_right(merged, additions, deletions):
-    """Merged count and diff: one group, anchored at its own right edge."""
-    char = 0.6 * META_SIZE
-    chars = len(f"{merged} merged") + len(f"+{additions}") + len(f"−{deletions}")
-    # The gaps are drawn below; the slack absorbs font width spread.
-    width = math.ceil(chars * char + MERGED_GAP + 6 + 4)
+    """Merged count and the diff badge, anchored at the group's right edge."""
+    text_w = len(f"{merged} merged") * 0.6 * META_SIZE
+    bw = badge_width(additions, deletions)
+    # The slack absorbs the spread between monospace font widths.
+    width = math.ceil(text_w + MERGED_GAP + bw + 4)
+    centre = TITLE_BASE - 0.36 * BADGE_SIZE  # badge digits share the baseline
     return f"""\
 <svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{TITLE_HEIGHT}">
 <style>
-text {{ font: 500 {META_SIZE}px {MONO}; fill: #59636e; }}
-.a {{ fill: #1a7f37; }} .d {{ fill: #d1242f; }}
-@media (prefers-color-scheme: dark) {{
-  text {{ fill: #9198a1; }} .a {{ fill: #3fb950; }} .d {{ fill: #f85149; }}
-}}
+.t {{ font: 500 {BADGE_SIZE}px {MONO}; }}
+.m {{ font: 500 {META_SIZE}px {MONO}; fill: #59636e; }}
+{BADGE_CSS}
+@media (prefers-color-scheme: dark) {{ .m {{ fill: #9198a1; }} }}
 </style>
-<text x="{width}" y="{TITLE_BASE}" text-anchor="end">{merged} merged\
-<tspan class="a" dx="{MERGED_GAP}">+{additions}</tspan>\
-<tspan class="d" dx="6">−{deletions}</tspan></text>
+<text class="m" x="{width - bw - MERGED_GAP}" y="{TITLE_BASE}" \
+text-anchor="end">{merged} merged</text>
+{badge(width - bw, centre, additions, deletions)}
 </svg>
 """, width
 
@@ -296,7 +316,7 @@ def render(prs, total):
         lines = [line, ""]
         shown = items[:SHOW]
         hidden = len(items) - SHOW
-        for i, pr in enumerate(shown):
+        for pr in shown:
             # Number first, in code font: within a repository the numbers share
             # a width, so they line up into a column like a changelog.
             head = SEP.join([f'[`#{pr["number"]}`]({pr["url"]})', pr["title"]])
@@ -307,11 +327,11 @@ def render(prs, total):
             # from wrapping around it.
             stats = diff(pr["additions"], pr["deletions"], f'{pr["url"]}/files')
             row = f'- {head} {stats}<br clear="all">'
-            # "More" belongs to the last row as a bare line under its text, so
-            # it has no bullet of its own and no list gap above it.
-            if hidden > 0 and i == len(shown) - 1:
-                row += f"[+{hidden} more →]({repo_url(repo)})"
             lines.append(row)
+        # Not a list item, so no bullet and no indent: it starts at the same
+        # left edge as the repository name above the list.
+        if hidden > 0:
+            lines += ["", f"[+{hidden} more →]({repo_url(repo)})"]
         chunks.append("\n".join(lines))
 
     # Only reachable past LIMIT: those pull requests were never fetched, so
