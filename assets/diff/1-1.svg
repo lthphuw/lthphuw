@@ -1,9 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="36" height="12" viewBox="0 0 36 12">
+<svg xmlns="http://www.w3.org/2000/svg" width="36" height="21" viewBox="0 0 36 21">
 <style>
 text { font: 500 12px ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace; }
 .a { fill: #1a7f37; } .d { fill: #d1242f; }
 @media (prefers-color-scheme: dark) { .a { fill: #3fb950; } .d { fill: #f85149; } }
 </style>
-<text class="a" x="0" y="11.2" textLength="14.4" lengthAdjust="spacing">+1</text>
-<text class="d" x="21.6" y="11.2" textLength="14.4" lengthAdjust="spacing">−1</text>
+<text class="a" x="0" y="15.5" textLength="14.4" lengthAdjust="spacing">+1</text>
+<text class="d" x="21.6" y="15.5" textLength="14.4" lengthAdjust="spacing">−1</text>
 </svg>
