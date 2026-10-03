@@ -1,13 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="78" height="21" viewBox="0 0 78 21">
+<svg xmlns="http://www.w3.org/2000/svg" width="72" height="25" viewBox="0 0 72 25">
 <style>
-.t { font: 500 11px ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace; }
-.p { fill: #f6f8fa; stroke: #d1d9e0; }
+text { font: 500 12px ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace; }
+.o { fill: #59636e; } .n { fill: #1f2328; } .s { fill: #9a6700; }
+.m { fill: #59636e; } .b { fill: #afb8c1; }
 .a { fill: #1a7f37; } .d { fill: #d1242f; }
 @media (prefers-color-scheme: dark) {
-  .p { fill: #151b23; stroke: #3d444d; }
+  .o { fill: #9198a1; } .n { fill: #f0f6fc; } .s { fill: #e3b341; }
+  .m { fill: #9198a1; } .b { fill: #59636e; }
   .a { fill: #3fb950; } .d { fill: #f85149; }
 }
 </style>
-<rect class="p" x="0.5" y="3.5" width="77" height="15" rx="7.5"/>
-<text class="t" x="6" y="14.96"><tspan class="a">+1009</tspan><tspan class="d" dx="6.6">−125</tspan></text>
+<text class="a" x="0" y="15.5" textLength="36" lengthAdjust="spacing">+1009</text>
+<text class="d" x="43.2" y="15.5" textLength="28.8" lengthAdjust="spacing">−125</text>
 </svg>

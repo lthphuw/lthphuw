@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="253" height="19">
+<style>
+text { font-family: ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace; }
+.o, .n { font-size: 15px; } .n { font-weight: 700; }
+.c { font-size: 13px; font-weight: 500; }
+.o { fill: #59636e; } .n { fill: #1f2328; } .s { fill: #9a6700; }
+.m { fill: #59636e; } .b { fill: #afb8c1; }
+.a { fill: #1a7f37; } .d { fill: #d1242f; }
+@media (prefers-color-scheme: dark) {
+  .o { fill: #9198a1; } .n { fill: #f0f6fc; } .s { fill: #e3b341; }
+  .m { fill: #9198a1; } .b { fill: #59636e; }
+  .a { fill: #3fb950; } .d { fill: #f85149; }
+}
+</style>
+<text class="o" x="0" y="12" textLength="126" lengthAdjust="spacing">sunsmarterjie/</text>
+<text class="n" x="126" y="12" textLength="63" lengthAdjust="spacing">yolov12</text>
+<polygon class="s" points="203.50,0.10 204.96,4.59 209.68,4.59 205.86,7.37 207.32,11.86 203.50,9.08 199.68,11.86 201.14,7.37 197.32,4.59 202.04,4.59"/>
+<text class="c m" x="214" y="12">3k</text>
+</svg>

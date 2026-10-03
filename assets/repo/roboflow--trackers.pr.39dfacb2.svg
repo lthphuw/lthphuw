@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="58" height="25" viewBox="0 0 58 25">
+<svg xmlns="http://www.w3.org/2000/svg" width="141" height="19">
 <style>
-text { font: 500 12px ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace; }
+text { font: 500 13px ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace; }
 .o { fill: #59636e; } .n { fill: #1f2328; } .s { fill: #9a6700; }
 .m { fill: #59636e; } .b { fill: #afb8c1; }
 .a { fill: #1a7f37; } .d { fill: #d1242f; }
@@ -10,6 +10,5 @@ text { font: 500 12px ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Libe
   .a { fill: #3fb950; } .d { fill: #f85149; }
 }
 </style>
-<text class="a" x="0" y="15.5" textLength="28.8" lengthAdjust="spacing">+342</text>
-<text class="d" x="36" y="15.5" textLength="21.6" lengthAdjust="spacing">−20</text>
+<text class="m" x="141" y="12" text-anchor="end">2 merged<tspan class="b" dx="7">|</tspan><tspan class="a" dx="7">+239</tspan><tspan class="d" dx="7.8">−8</tspan></text>
 </svg>
