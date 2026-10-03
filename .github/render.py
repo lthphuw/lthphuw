@@ -44,11 +44,12 @@ STARS = re.compile(r"★[\d.]+k?")
 MONO = ("ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,"
         "'Liberation Mono',monospace")
 SIZE = 12      # px, a notch under the 14px profile text
-HEIGHT = 12
-# An inline image sits with its bottom edge on the text baseline. Lifting the
-# digits' own baseline slightly off that edge centres them on the 14px digits
-# around them instead of bottom-aligning them.
-BASELINE = HEIGHT - 0.8
+# The image floats to the right edge, so its top meets the top of a text line,
+# not the baseline. It is as tall as one line of the profile text (21px) and the
+# digits sit on that line's baseline, which puts them level with the text
+# beside them.
+HEIGHT = 21
+BASELINE = 15.5
 DIFF_SVG = re.compile(rf"{DIFF_DIR}/(\d+)-(\d+)\.svg")
 
 # Two SVGs per repository for its title line, named by content (see title()).
@@ -62,6 +63,7 @@ TITLE_HEIGHT = 24
 TITLE_BASE = 16          # shared baseline of every text on the title line
 TITLE_GAP = 8            # between the repository name and the star
 STAR_R = 6.5             # outer radius of the star
+MERGED_GAP = 20          # between "merged" and the diff on the right
 # Room kept for the star count whatever it is. A width that followed the text
 # would change the README whenever 9.9k became 10k, which the star-drift rule
 # in main() exists to avoid.
@@ -107,7 +109,7 @@ def diff(additions, deletions, url):
     src = f"{DIFF_DIR}/{additions}-{deletions}.svg"
     alt = f"+{additions} −{deletions}"
     # The link matters: an unlinked image on GitHub opens the image itself.
-    return f'[<img src="{src}" alt="{alt}">]({url})'
+    return f'[<img src="{src}" align="right" alt="{alt}">]({url})'
 
 
 def diff_svg(additions, deletions):
@@ -185,8 +187,8 @@ def title_right(merged, additions, deletions):
     """Merged count and diff: one group, anchored at its own right edge."""
     char = 0.6 * META_SIZE
     chars = len(f"{merged} merged") + len(f"+{additions}") + len(f"−{deletions}")
-    # 12 and 6 are the gaps drawn below; the slack absorbs font width spread.
-    width = math.ceil(chars * char + 12 + 6 + 4)
+    # The gaps are drawn below; the slack absorbs font width spread.
+    width = math.ceil(chars * char + MERGED_GAP + 6 + 4)
     return f"""\
 <svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{TITLE_HEIGHT}">
 <style>
@@ -197,7 +199,7 @@ text {{ font: 500 {META_SIZE}px {MONO}; fill: #59636e; }}
 }}
 </style>
 <text x="{width}" y="{TITLE_BASE}" text-anchor="end">{merged} merged\
-<tspan class="a" dx="12">+{additions}</tspan>\
+<tspan class="a" dx="{MERGED_GAP}">+{additions}</tspan>\
 <tspan class="d" dx="6">−{deletions}</tspan></text>
 </svg>
 """, width
@@ -292,15 +294,24 @@ def render(prs, total):
         titles.update(svgs)
         # The blank line ends the HTML block; without it the list is swallowed.
         lines = [line, ""]
-        for pr in items[:SHOW]:
+        shown = items[:SHOW]
+        hidden = len(items) - SHOW
+        for i, pr in enumerate(shown):
             # Number first, in code font: within a repository the numbers share
             # a width, so they line up into a column like a changelog.
-            fields = [f'[`#{pr["number"]}`]({pr["url"]})', pr["title"],
-                      diff(pr["additions"], pr["deletions"], f'{pr["url"]}/files')]
-            lines.append(f"- {SEP.join(fields)}")
-        hidden = len(items) - SHOW
-        if hidden > 0:
-            lines.append(f"- [+{hidden} more →]({repo_url(repo)})")
+            head = SEP.join([f'[`#{pr["number"]}`]({pr["url"]})', pr["title"]])
+            # The diff floats right and comes last, like the title's right
+            # group: on a wide screen it sits at the row's right edge, on a
+            # narrow one it drops to a second line instead of being torn off
+            # the title mid-sentence. The clearing break keeps the next row
+            # from wrapping around it.
+            stats = diff(pr["additions"], pr["deletions"], f'{pr["url"]}/files')
+            row = f'- {head} {stats}<br clear="all">'
+            # "More" belongs to the last row as a bare line under its text, so
+            # it has no bullet of its own and no list gap above it.
+            if hidden > 0 and i == len(shown) - 1:
+                row += f"[+{hidden} more →]({repo_url(repo)})"
+            lines.append(row)
         chunks.append("\n".join(lines))
 
     # Only reachable past LIMIT: those pull requests were never fetched, so
