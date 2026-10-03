@@ -44,5 +44,8 @@ jobs:
           git add README.md assets
           git diff --cached --quiet || {
             git commit -m "chore: refresh open source"
+            # A push to main while this job ran moves it on; rebase onto that
+            # rather than fail until the next run.
+            git pull --rebase
             git push
           }

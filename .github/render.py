@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Refresh the auto-generated part of the Open source section in README.md.
+"""Refresh the generated part of the Contributions section in README.md.
 
-Only the text between <!-- os:start --> and <!-- os:end --> is touched, so any
-pinned lines written by hand above the marker survive untouched.
+Only the text between <!-- os:start --> and <!-- os:end --> is touched, so the
+Abstract and anything else written by hand outside the markers survives.
 """
 
 import hashlib
@@ -17,19 +17,25 @@ import urllib.parse
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 README = ROOT / "README.md"
-# One small SVG per distinct "+a −d" pair, referenced from README.md.
+# One small SVG per distinct "+a −d" pair, referenced from README.md and named
+# by content (see diff_name()).
 DIFF_DIR = "assets/diff"
 START = "<!-- os:start -->"
 END = "<!-- os:end -->"
 AUTHOR = "lthphuw"
 # Merged pull requests the author opened against somebody else's repository.
 SEARCH = f"is:pr is:merged author:{AUTHOR} -user:{AUTHOR}"
-# The search API caps one page at 100; past that the per-repository counts
-# undercount and a global link covers the rest.
+# The search API caps one page at 100, and the search is ordered by last update,
+# not by merge; past that the per-repository counts undercount and a global link
+# covers the rest.
 LIMIT = 100
 # Pull requests listed per repository; the rest collapse into a "+N more" link
 # that belongs to that repository.
 SHOW = 5
+
+# One line of the profile text on GitHub: 14px at a line-height of 1.5. Every
+# vertical size below is a multiple or a small offset of it.
+LINE_H = 21
 
 # Between the fields of a line: two spaces either side of a bar. Only the last
 # space can break, so a wrapped line ends on a bar instead of starting with one.
@@ -58,24 +64,24 @@ WIDE = 601
 BLANK = "assets/blank.svg"
 BLANK_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>\n'
 BLANK_URL = f"https://raw.githubusercontent.com/{AUTHOR}/{AUTHOR}/main/{BLANK}"
-GROUP_GAP = 19  # blank space between a group's last line and the next title
-# The space between two groups. A line is never shorter than the profile text's
-# 21px, so an image taller than that, sitting at the end of the last line of a
-# group, stretches the line and leaves the difference as space below the text.
-# It cannot go above the next title instead: the title is two images, and a
-# narrow screen puts the second on a line of its own.
+# The space between two groups. A line is never shorter than LINE_H, so an image
+# taller than that, sitting at the end of the last line of a group, stretches
+# the line and leaves the difference as space below the text. It cannot go above
+# the next title instead: the title is two images, and a narrow screen puts the
+# second on a line of its own.
+GROUP_GAP = 23  # blank space between a group's last line and the next title
 GAP = "assets/gap.svg"
-GAP_H = 21 + GROUP_GAP
+GAP_H = LINE_H + GROUP_GAP
 GAP_SVG = f'<svg xmlns="http://www.w3.org/2000/svg" width="1" height="{GAP_H}"/>\n'
 GAP_IMG = f'<img src="{GAP}" align="top" width="1" height="{GAP_H}" alt="">'
 
-# A row's stats: as tall as one line of the profile text (21px) plus a few px,
-# which is the space between two rows. Both layouts put the image's top on the
+# A row's stats: as tall as a line of text plus a few px, which is the space
+# between two rows. Both layouts put the image's top on the
 # top of its line (align="top"), so digits on the same baseline as the text
 # are level with it whichever layout is shown.
-ROW_H = 25
+ROW_H = LINE_H + 4
 ROW_BASE = 15.5
-DIFF_SVG = re.compile(rf"{DIFF_DIR}/(\d+)-(\d+)\.svg")
+DIFF_SVG = re.compile(rf"{DIFF_DIR}/(\d+)-(\d+)\.[0-9a-f]{{8}}\.svg")
 
 # Two SVGs per repository for its title line, named by content (see title()).
 REPO_DIR = "assets/repo"
@@ -183,6 +189,17 @@ lengthAdjust="spacing">{removed}</text>
 """
 
 
+def short_hash(svg):
+    return hashlib.sha1(svg.encode("utf-8")).hexdigest()[:8]
+
+
+def diff_name(additions, deletions):
+    """Named by content, like the title images (see title()). It also matters
+    here for a second reason: main() rewrites nothing while the README text is
+    unchanged, so a restyled image under an unchanged name would never ship."""
+    return f"{additions}-{deletions}.{short_hash(diff_svg(additions, deletions))}.svg"
+
+
 def star_points(cx, cy, r):
     inner = r * 0.382
     pts = []
@@ -250,15 +267,11 @@ text {{ font: 500 {META_SIZE}px {MONO}; }}
 """, width, height
 
 
-def short_hash(svg):
-    return hashlib.sha1(svg.encode("utf-8")).hexdigest()[:8]
-
-
 def title(repo, star, merged, additions, deletions):
     """The title line's HTML, and the SVGs it references by file name."""
     slug = title_slug(repo)
     left, lw, lh = title_left(repo, star)
-    right, rw, rh = title_right(merged, additions, deletions)
+    right, _, _ = title_right(merged, additions, deletions)
     # Named by content, so an image that changes is a new URL. GitHub serves
     # raw files with max-age=300: under an unchanged name, a cached old copy
     # gets squeezed into the new width and height for minutes. The star count
@@ -293,7 +306,7 @@ def row(pr, tail=""):
     # width, so they line up into a column like a changelog.
     head = (f'<a href="{pr["url"]}"><code>#{pr["number"]}</code></a>'
             f'{SEP}{inline_code(pr["title"])}')
-    src = f'{DIFF_DIR}/{pr["additions"]}-{pr["deletions"]}.svg'
+    src = f'{DIFF_DIR}/{diff_name(pr["additions"], pr["deletions"])}'
     return (f'<div>{head} '
             + stats(src, f'{pr["url"]}/files',
                     f'+{pr["additions"]} −{pr["deletions"]}')
@@ -313,7 +326,7 @@ def sync_dir(subdir, wanted):
 
 def sync_svgs(block, titles):
     """Write the SVGs the block references; drop the ones it no longer does."""
-    sync_dir(DIFF_DIR, {f"{a}-{d}.svg": diff_svg(int(a), int(d))
+    sync_dir(DIFF_DIR, {diff_name(int(a), int(d)): diff_svg(int(a), int(d))
                         for a, d in DIFF_SVG.findall(block)})
     sync_dir(REPO_DIR, titles)
     (ROOT / BLANK).write_text(BLANK_SVG, encoding="utf-8")
