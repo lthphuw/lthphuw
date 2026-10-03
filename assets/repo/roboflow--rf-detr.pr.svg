@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="171" height="30">
+<style>
+text { font: 500 13px ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace; fill: #59636e; }
+.a { fill: #1a7f37; } .d { fill: #d1242f; }
+@media (prefers-color-scheme: dark) {
+  text { fill: #9198a1; } .a { fill: #3fb950; } .d { fill: #f85149; }
+}
+</style>
+<text x="171" y="19" text-anchor="end">14 merged<tspan class="a" dx="12">+9584</tspan><tspan class="d" dx="6">−1158</tspan></text>
+</svg>

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="217" height="30">
+<style>
+text { font-family: ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace; }
+.o { font-size: 15px; fill: #59636e; }
+.n { font-size: 15px; font-weight: 700; fill: #1f2328; }
+.s { fill: #9a6700; }
+.c { font-size: 13px; font-weight: 500; fill: #59636e; }
+@media (prefers-color-scheme: dark) {
+  .o { fill: #9198a1; } .n { fill: #f0f6fc; } .s { fill: #e3b341; }
+  .c { fill: #9198a1; }
+}
+</style>
+<text class="o" x="0" y="19" textLength="81" lengthAdjust="spacing">roboflow/</text>
+<text class="n" x="81" y="19" textLength="72" lengthAdjust="spacing">trackers</text>
+<polygon class="s" points="167.50,7.10 168.96,11.59 173.68,11.59 169.86,14.37 171.32,18.86 167.50,16.08 163.68,18.86 165.14,14.37 161.32,11.59 166.04,11.59"/>
+<text class="c" x="178" y="19">3.9k</text>
+</svg>
