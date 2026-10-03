@@ -6,6 +6,7 @@ pinned lines written by hand above the marker survive untouched.
 """
 
 import hashlib
+import html
 import json
 import math
 import pathlib
@@ -37,45 +38,75 @@ SEP = "&nbsp;&nbsp;|&nbsp; "
 # Any rendered star count, used to compare two blocks while ignoring stars.
 STARS = re.compile(r"★[\d.]+k?")
 
-# Diff stats are drawn as SVG because Markdown on GitHub strips CSS: an image
-# is the only way to get a smaller size, another font and colour at once.
-# Monospace makes the width computable without measuring text; textLength
-# absorbs the small spread between fonts (Consolas 0.55em, most others 0.6em).
+# Stats are drawn as SVG because Markdown on GitHub strips CSS: an image is the
+# only way to get a smaller size, another font and colour at once. Monospace
+# makes the width computable without measuring text; textLength absorbs the
+# small spread between fonts (Consolas 0.55em, most others 0.6em).
 MONO = ("ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,"
         "'Liberation Mono',monospace")
-# The diff sits in a small rounded badge, the same one in a row and in a title.
-BADGE_SIZE = 11   # px, a size under the 14px profile text
-BADGE_H = 16
-BADGE_PAD = 6     # inside the badge, left and right
-# A row's image floats to the right edge, so its top meets the top of a text
-# line, not the baseline. It is as tall as one line of the profile text (21px)
-# and the badge is centred on that line, level with the text beside it.
-HEIGHT = 21
-BADGE_CSS = """\
-.p { fill: #f6f8fa; stroke: #d1d9e0; }
-.a { fill: #1a7f37; } .d { fill: #d1242f; }
-@media (prefers-color-scheme: dark) {
-  .p { fill: #151b23; stroke: #3d444d; }
-  .a { fill: #3fb950; } .d { fill: #f85149; }
-}"""
+SIZE = 12        # px, a notch under the 14px profile text
+META_SIZE = 13   # the title's "merged" and the stats beside it
+TITLE_SIZE = 15
+
+# The same pair of images serves two layouts, told apart by the width of the
+# window (see stats()). At or above WIDE the stats float to the right edge of
+# the line; below it they flow after the text and wrap to the start of a line.
+WIDE = 601
+# 1x1 and transparent: shown in place of the copy that does not belong to the
+# current layout. Absolute, because a relative srcset is not known to be
+# rewritten the way src is.
+BLANK = "assets/blank.svg"
+BLANK_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>\n'
+BLANK_URL = f"https://raw.githubusercontent.com/{AUTHOR}/{AUTHOR}/main/{BLANK}"
+GROUP_GAP = 19  # blank space between a group's last line and the next title
+# The space between two groups. A line is never shorter than the profile text's
+# 21px, so an image taller than that, sitting at the end of the last line of a
+# group, stretches the line and leaves the difference as space below the text.
+# It cannot go above the next title instead: the title is two images, and a
+# narrow screen puts the second on a line of its own.
+GAP = "assets/gap.svg"
+GAP_H = 21 + GROUP_GAP
+GAP_SVG = f'<svg xmlns="http://www.w3.org/2000/svg" width="1" height="{GAP_H}"/>\n'
+GAP_IMG = f'<img src="{GAP}" align="top" width="1" height="{GAP_H}" alt="">'
+
+# A row's stats: as tall as one line of the profile text (21px) plus a few px,
+# which is the space between two rows. Both layouts put the image's top on the
+# top of its line (align="top"), so digits on the same baseline as the text
+# are level with it whichever layout is shown.
+ROW_H = 25
+ROW_BASE = 15.5
 DIFF_SVG = re.compile(rf"{DIFF_DIR}/(\d+)-(\d+)\.svg")
 
 # Two SVGs per repository for its title line, named by content (see title()).
 REPO_DIR = "assets/repo"
-TITLE_SIZE = 15
-META_SIZE = 13
-# The title is not wrapped in a paragraph (see title()), so nothing but this
-# height separates it from the first pull request below: the strip under
-# the text and its descenders is the whole gap.
-TITLE_HEIGHT = 24
-TITLE_BASE = 16          # shared baseline of every text on the title line
+# The title is not wrapped in a paragraph (see title()), so what separates it
+# from the line above and the first row below is the blank space left in these
+# two images, and nothing else. The tallest things in them are the star, which
+# reaches 12px above the baseline, and the ascenders. The baseline therefore
+# sits 12px down, and the image ends 7px under it, which leaves the title about
+# as far from the first row as rows are from each other. The same height is the
+# line pitch when a narrow screen puts the right image on a second line.
+TITLE_HEIGHT = 19
+TITLE_BASE = 12          # shared baseline of every text on the title line
 TITLE_GAP = 8            # between the repository name and the star
 STAR_R = 6.5             # outer radius of the star
-MERGED_GAP = 20          # between "merged" and the diff on the right
+BAR_GAP = 7              # either side of the bar between "merged" and the diff
 # Room kept for the star count whatever it is. A width that followed the text
 # would change the README whenever 9.9k became 10k, which the star-drift rule
 # in main() exists to avoid.
 STAR_CHARS = 5
+
+# Colours are GitHub's own. prefers-color-scheme follows the viewer's system
+# theme, which is what GitHub's default theme follows too.
+COLOURS = """\
+.o { fill: #59636e; } .n { fill: #1f2328; } .s { fill: #9a6700; }
+.m { fill: #59636e; } .b { fill: #afb8c1; }
+.a { fill: #1a7f37; } .d { fill: #d1242f; }
+@media (prefers-color-scheme: dark) {
+  .o { fill: #9198a1; } .n { fill: #f0f6fc; } .s { fill: #e3b341; }
+  .m { fill: #9198a1; } .b { fill: #59636e; }
+  .a { fill: #3fb950; } .d { fill: #f85149; }
+}"""
 
 QUERY = """
 query($q: String!, $n: Int!) {
@@ -113,45 +144,41 @@ def stars(n):
     return f"{n / 1000:.1f}".removesuffix(".0") + "k"
 
 
-def diff(additions, deletions, url):
-    src = f"{DIFF_DIR}/{additions}-{deletions}.svg"
-    alt = f"+{additions} −{deletions}"
-    # The link matters: an unlinked image on GitHub opens the image itself.
-    return f'[<img src="{src}" align="right" alt="{alt}">]({url})'
+def stats(src, url, alt):
+    """One image, written twice, one copy per layout.
 
-
-def badge_width(additions, deletions):
-    # No thousands separator: at this size a monospace comma reads as a full
-    # stop.
-    chars = len(f"+{additions}") + 1 + len(f"−{deletions}")
-    return math.ceil(chars * 0.6 * BADGE_SIZE + 2 * BADGE_PAD)
-
-
-def badge(x, centre, additions, deletions):
-    """A rounded box holding the diff, its left edge at x and its middle at
-    centre. Colours are GitHub's diff green and red; prefers-color-scheme
-    follows the viewer's system theme, which GitHub's default theme follows."""
-    char = 0.6 * BADGE_SIZE
-    width = badge_width(additions, deletions)
-    top = centre - BADGE_H / 2
-    return (
-        f'<rect class="p" x="{x + 0.5:g}" y="{top + 0.5:g}" width="{width - 1}" '
-        f'height="{BADGE_H - 1}" rx="{(BADGE_H - 1) / 2:g}"/>\n'
-        f'<text class="t" x="{x + BADGE_PAD:g}" y="{centre + 0.36 * BADGE_SIZE:g}">'
-        f'<tspan class="a">+{additions}</tspan>'
-        f'<tspan class="d" dx="{char:g}">−{deletions}</tspan></text>')
+    An image cannot be both at the right edge of a line and at the start of
+    the next one, and that is where a line that does not fit has to put it.
+    The first copy flows with the text, so when there is no room it wraps to
+    the start of a line. The second floats right. Each is swapped for a blank
+    image in the window width where it does not belong, so only one shows. The
+    link matters: an unlinked image on GitHub opens the image itself."""
+    flow = (f'<picture><source media="(min-width: {WIDE}px)" srcset="{BLANK_URL}">'
+            f'<img src="{src}" align="top" alt="{alt}"></picture>')
+    float_ = (f'<picture><source media="(max-width: {WIDE - 1}px)" '
+              f'srcset="{BLANK_URL}"><img src="{src}" align="right" alt="{alt}">'
+              f'</picture>')
+    return f'<a href="{url}">{flow}</a><a href="{url}">{float_}</a>'
 
 
 def diff_svg(additions, deletions):
-    width = badge_width(additions, deletions)
+    # No thousands separator: at this size a monospace comma reads as a full
+    # stop.
+    added, removed = f"+{additions}", f"−{deletions}"
+    char = 0.6 * SIZE
+    wa, wr = len(added) * char, len(removed) * char
+    width = math.ceil(wa + char + wr)
     return f"""\
-<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{HEIGHT}" \
-viewBox="0 0 {width} {HEIGHT}">
+<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{ROW_H}" \
+viewBox="0 0 {width} {ROW_H}">
 <style>
-.t {{ font: 500 {BADGE_SIZE}px {MONO}; }}
-{BADGE_CSS}
+text {{ font: 500 {SIZE}px {MONO}; }}
+{COLOURS}
 </style>
-{badge(0, HEIGHT / 2 + 0.5, additions, deletions)}
+<text class="a" x="0" y="{ROW_BASE:g}" textLength="{wa:g}" \
+lengthAdjust="spacing">{added}</text>
+<text class="d" x="{wa + char:g}" y="{ROW_BASE:g}" textLength="{wr:g}" \
+lengthAdjust="spacing">{removed}</text>
 </svg>
 """
 
@@ -172,57 +199,55 @@ def title_slug(repo):
 
 
 def title_left(repo, star):
-    """Repository name and stars: the group that sits against the left edge."""
+    """Repository name and stars: the group against the left edge."""
     owner, name = repo.split("/")
+    base = TITLE_BASE
     char = 0.6 * TITLE_SIZE
     wo, wn = (len(owner) + 1) * char, len(name) * char
     star_cx = wo + wn + TITLE_GAP + STAR_R
-    star_cy = TITLE_BASE - 0.36 * TITLE_SIZE
+    star_cy = base - 0.36 * TITLE_SIZE
     count_x = star_cx + STAR_R + 4
     width = math.ceil(count_x + STAR_CHARS * 0.6 * META_SIZE)
+    height = TITLE_HEIGHT
     return f"""\
-<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{TITLE_HEIGHT}">
+<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}">
 <style>
 text {{ font-family: {MONO}; }}
-.o {{ font-size: {TITLE_SIZE}px; fill: #59636e; }}
-.n {{ font-size: {TITLE_SIZE}px; font-weight: 700; fill: #1f2328; }}
-.s {{ fill: #9a6700; }}
-.c {{ font-size: {META_SIZE}px; font-weight: 500; fill: #59636e; }}
-@media (prefers-color-scheme: dark) {{
-  .o {{ fill: #9198a1; }} .n {{ fill: #f0f6fc; }} .s {{ fill: #e3b341; }}
-  .c {{ fill: #9198a1; }}
-}}
+.o, .n {{ font-size: {TITLE_SIZE}px; }} .n {{ font-weight: 700; }}
+.c {{ font-size: {META_SIZE}px; font-weight: 500; }}
+{COLOURS}
 </style>
-<text class="o" x="0" y="{TITLE_BASE}" textLength="{wo:g}" \
+<text class="o" x="0" y="{base:g}" textLength="{wo:g}" \
 lengthAdjust="spacing">{owner}/</text>
-<text class="n" x="{wo:g}" y="{TITLE_BASE}" textLength="{wn:g}" \
+<text class="n" x="{wo:g}" y="{base:g}" textLength="{wn:g}" \
 lengthAdjust="spacing">{name}</text>
 <polygon class="s" points="{star_points(star_cx, star_cy, STAR_R)}"/>
-<text class="c" x="{count_x:g}" y="{TITLE_BASE}">{star}</text>
+<text class="c m" x="{count_x:g}" y="{base:g}">{star}</text>
 </svg>
-""", width
+""", width, height
 
 
 def title_right(merged, additions, deletions):
-    """Merged count and the diff badge, anchored at the group's right edge."""
-    text_w = len(f"{merged} merged") * 0.6 * META_SIZE
-    bw = badge_width(additions, deletions)
-    # The slack absorbs the spread between monospace font widths.
-    width = math.ceil(text_w + MERGED_GAP + bw + 4)
-    centre = TITLE_BASE - 0.36 * BADGE_SIZE  # badge digits share the baseline
+    """Merged count, a bar, and the diff: one group, right edge at the image's."""
+    words, added, removed = f"{merged} merged", f"+{additions}", f"−{deletions}"
+    char = 0.6 * META_SIZE
+    chars = len(words) + 1 + len(added) + 1 + len(removed)
+    # Computed widths only size the image; the text is anchored to its right
+    # edge, so a font that runs a little wide or narrow cannot move that edge.
+    width = math.ceil(chars * char + 2 * BAR_GAP + 2)
+    height = TITLE_HEIGHT
     return f"""\
-<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{TITLE_HEIGHT}">
+<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}">
 <style>
-.t {{ font: 500 {BADGE_SIZE}px {MONO}; }}
-.m {{ font: 500 {META_SIZE}px {MONO}; fill: #59636e; }}
-{BADGE_CSS}
-@media (prefers-color-scheme: dark) {{ .m {{ fill: #9198a1; }} }}
+text {{ font: 500 {META_SIZE}px {MONO}; }}
+{COLOURS}
 </style>
-<text class="m" x="{width - bw - MERGED_GAP}" y="{TITLE_BASE}" \
-text-anchor="end">{merged} merged</text>
-{badge(width - bw, centre, additions, deletions)}
+<text class="m" x="{width}" y="{TITLE_BASE}" text-anchor="end">{words}\
+<tspan class="b" dx="{BAR_GAP}">|</tspan>\
+<tspan class="a" dx="{BAR_GAP}">{added}</tspan>\
+<tspan class="d" dx="{char:g}">{removed}</tspan></text>
 </svg>
-""", width
+""", width, height
 
 
 def short_hash(svg):
@@ -230,10 +255,10 @@ def short_hash(svg):
 
 
 def title(repo, star, merged, additions, deletions):
-    """The title line's Markdown, and the SVGs it references by file name."""
+    """The title line's HTML, and the SVGs it references by file name."""
     slug = title_slug(repo)
-    left, lw = title_left(repo, star)
-    right, rw = title_right(merged, additions, deletions)
+    left, lw, lh = title_left(repo, star)
+    right, rw, rh = title_right(merged, additions, deletions)
     # Named by content, so an image that changes is a new URL. GitHub serves
     # raw files with max-age=300: under an unchanged name, a cached old copy
     # gets squeezed into the new width and height for minutes. The star count
@@ -241,25 +266,38 @@ def title(repo, star, merged, additions, deletions):
     # README, which is what main() relies on.
     left_name = f"{slug}.{short_hash(title_left(repo, '')[0])}.svg"
     right_name = f"{slug}.pr.{short_hash(right)}.svg"
-    # Two images, two links: an image can only carry one. The right one floats
-    # and comes second, so on a screen too narrow for both it drops under the
-    # left one instead of pushing it out of the way. The clearing break keeps
-    # the pull request list from wrapping around it when it does. align="top"
-    # stops the left image sitting on the text baseline, which would leave a
-    # strip of empty line below it. A <div> rather than Markdown: a paragraph
-    # gets a 16px bottom margin from GitHub, a div gets none, and the gap to
-    # the list is then the one chosen above. Markdown is not parsed inside it,
-    # hence the anchors.
+    # Two images, two links: an image can only carry one. align="top" stops the
+    # left one sitting on the text baseline, which would leave a strip of empty
+    # line below it. The clearing break keeps what follows from wrapping around
+    # a floated copy. A <div> rather than Markdown: a paragraph gets a 16px
+    # bottom margin from GitHub, a div gets none, so the gap to the first row
+    # is the one chosen above. Markdown is not parsed inside it, hence anchors.
     line = (
         f'<div><a href="https://github.com/{repo}">'
         f'<img src="{REPO_DIR}/{left_name}" align="top" width="{lw}" '
-        f'height="{TITLE_HEIGHT}" alt="{repo}, ★{star}"></a>'
-        f'<a href="{repo_url(repo)}">'
-        f'<img src="{REPO_DIR}/{right_name}" align="right" width="{rw}" '
-        f'height="{TITLE_HEIGHT}" alt="{merged} merged, +{additions} −{deletions}">'
-        f'</a><br clear="all"></div>'
+        f'height="{lh}" alt="{repo}, ★{star}"></a> '
+        + stats(f"{REPO_DIR}/{right_name}", repo_url(repo),
+                f"{merged} merged | +{additions} −{deletions}")
+        + '<br clear="all"></div>'
     )
     return line, {left_name: left, right_name: right}
+
+
+def inline_code(text):
+    """A pull request title as HTML: escaped, with `code` spans kept as code."""
+    return re.sub(r"`([^`]+)`", r"<code>\1</code>", html.escape(text, quote=False))
+
+
+def row(pr, tail=""):
+    # Number first, in code font: within a repository the numbers share a
+    # width, so they line up into a column like a changelog.
+    head = (f'<a href="{pr["url"]}"><code>#{pr["number"]}</code></a>'
+            f'{SEP}{inline_code(pr["title"])}')
+    src = f'{DIFF_DIR}/{pr["additions"]}-{pr["deletions"]}.svg'
+    return (f'<div>{head} '
+            + stats(src, f'{pr["url"]}/files',
+                    f'+{pr["additions"]} −{pr["deletions"]}')
+            + tail + '<br clear="all"></div>')
 
 
 def sync_dir(subdir, wanted):
@@ -278,6 +316,8 @@ def sync_svgs(block, titles):
     sync_dir(DIFF_DIR, {f"{a}-{d}.svg": diff_svg(int(a), int(d))
                         for a, d in DIFF_SVG.findall(block)})
     sync_dir(REPO_DIR, titles)
+    (ROOT / BLANK).write_text(BLANK_SVG, encoding="utf-8")
+    (ROOT / GAP).write_text(GAP_SVG, encoding="utf-8")
 
 
 def repo_url(repo):
@@ -306,32 +346,27 @@ def render(prs, total):
 
     chunks = []
     titles = {}
-    for repo, items in ranked:
+    for i, (repo, items) in enumerate(ranked):
         star = stars(items[0]["repository"]["stargazerCount"])
         added = sum(pr["additions"] for pr in items)
         removed = sum(pr["deletions"] for pr in items)
+        # The gap to the next group is carried by the last line of this one.
+        tail = GAP_IMG if i < len(ranked) - 1 else ""
         line, svgs = title(repo, star, len(items), added, removed)
         titles.update(svgs)
-        # The blank line ends the HTML block; without it the list is swallowed.
-        lines = [line, ""]
+        # One HTML block per group, with no blank line in it: a blank line
+        # would end the block and hand the rest back to Markdown, which wraps
+        # a paragraph's margin around it. Rows are not a list for the same
+        # reason: a list brings its own indent, bullets and 16px margins.
         shown = items[:SHOW]
         hidden = len(items) - SHOW
-        for pr in shown:
-            # Number first, in code font: within a repository the numbers share
-            # a width, so they line up into a column like a changelog.
-            head = SEP.join([f'[`#{pr["number"]}`]({pr["url"]})', pr["title"]])
-            # The diff floats right and comes last, like the title's right
-            # group: on a wide screen it sits at the row's right edge, on a
-            # narrow one it drops to a second line instead of being torn off
-            # the title mid-sentence. The clearing break keeps the next row
-            # from wrapping around it.
-            stats = diff(pr["additions"], pr["deletions"], f'{pr["url"]}/files')
-            row = f'- {head} {stats}<br clear="all">'
-            lines.append(row)
-        # Not a list item, so no bullet and no indent: it starts at the same
-        # left edge as the repository name above the list.
+        lines = [line]
+        for j, pr in enumerate(shown):
+            last = j == len(shown) - 1 and hidden <= 0
+            lines.append(row(pr, tail if last else ""))
         if hidden > 0:
-            lines += ["", f"[+{hidden} more →]({repo_url(repo)})"]
+            lines.append(f'<div><a href="{repo_url(repo)}">+{hidden} more →</a>'
+                         f'{tail}</div>')
         chunks.append("\n".join(lines))
 
     # Only reachable past LIMIT: those pull requests were never fetched, so
