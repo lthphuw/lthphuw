@@ -10,6 +10,6 @@ text { font: 500 12px ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Libe
   .a { fill: #3fb950; } .d { fill: #f85149; }
 }
 </style>
-<text class="a" x="0" y="15.5" textLength="28.8" lengthAdjust="spacing">+546</text>
-<text class="d" x="36" y="15.5" textLength="21.6" lengthAdjust="spacing">−52</text>
+<text class="a" x="0" y="15.5" textLength="28.8" lengthAdjust="spacing">+186</text>
+<text class="d" x="36" y="15.5" textLength="21.6" lengthAdjust="spacing">−42</text>
 </svg>
