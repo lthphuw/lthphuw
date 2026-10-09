@@ -10,5 +10,5 @@ text { font: 500 13px ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Libe
   .a { fill: #3fb950; } .d { fill: #f85149; }
 }
 </style>
-<text class="m" x="188" y="12" text-anchor="end">19 merged<tspan class="b" dx="7">|</tspan><tspan class="a" dx="7">+15534</tspan><tspan class="d" dx="7.8">−1400</tspan></text>
+<text class="m" x="188" y="12" text-anchor="end">21 merged<tspan class="b" dx="7">|</tspan><tspan class="a" dx="7">+20714</tspan><tspan class="d" dx="7.8">−2823</tspan></text>
 </svg>
