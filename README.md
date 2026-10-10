@@ -2,6 +2,18 @@
 
 I'm **Phu**. I work on computer vision and build the systems around it.
 
+### Featured
+
+<!-- feat:start -->
+**[INT8 quantization for RF-DETR on TensorRT](https://github.com/roboflow/rf-detr/pull/1595)**&nbsp;&nbsp;[`roboflow/rf-detr`](https://github.com/roboflow/rf-detr)<br>Adds `export(format="tensorrt", quantization="int8")`. I place the **Q/DQ nodes myself** on the FP16 graph instead of using onnxruntime's quantizer, which pulled the graph back to FP32. The engine runs **1.10–1.33× faster** than FP16 for about 0.5–0.85 AP.
+
+**[A faster TensorRT export and runtime](https://github.com/roboflow/rf-detr/pull/1583)**&nbsp;&nbsp;[`roboflow/rf-detr`](https://github.com/roboflow/rf-detr)<br>A reusable kernel **timing cache** (a 38 s build drops to **8 s**), **hardware- and version-compatible engines**, a **JSON sidecar** that describes input, normalisation and outputs for C++ and Triton users, and **CUDA graph replay** that cuts about 40% off each call.
+
+**[CoreML on the Neural Engine](https://github.com/roboflow/rf-detr/pull/1604)**&nbsp;&nbsp;[`roboflow/rf-detr`](https://github.com/roboflow/rf-detr)<br>Measured exactly where Core ML leaves the ANE, then fixed fp16 exports losing about 3 AP there by converting for **iOS 15**: **45.06 → 48.04 AP**, matching PyTorch.
+
+**[Real FP16 engines on TensorRT 11](https://github.com/roboflow/rf-detr/pull/1454)**&nbsp;&nbsp;[`roboflow/rf-detr`](https://github.com/roboflow/rf-detr)<br>TensorRT 11 removed the FP16 flag, so fp16 builds quietly fell back to FP32. I **cast the ONNX graph** instead, and the engine comes out **1.87× smaller**.
+<!-- feat:end -->
+
 ### Contributions
 
 <!-- os:start -->

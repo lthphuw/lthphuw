@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""Refresh the generated part of the Contributions section in README.md.
+"""Refresh the generated parts of README.md.
 
-Only the text between <!-- os:start --> and <!-- os:end --> is touched, so the
-Abstract and anything else written by hand outside the markers survives.
+Two blocks are written: Featured, between <!-- feat:start --> and
+<!-- feat:end -->, from the hand-picked list in .github/featured.json, and
+Contributions, between <!-- os:start --> and <!-- os:end -->. Everything outside
+the markers, such as the Abstract, survives.
 """
 
 import hashlib
@@ -22,6 +24,11 @@ README = ROOT / "README.md"
 DIFF_DIR = "assets/diff"
 START = "<!-- os:start -->"
 END = "<!-- os:end -->"
+FEAT_START = "<!-- feat:start -->"
+FEAT_END = "<!-- feat:end -->"
+# What to feature is a choice, so it is written by hand; numbers and dates are
+# not, and come from the API like everything else.
+FEATURED = ROOT / ".github" / "featured.json"
 AUTHOR = "lthphuw"
 # Merged pull requests the author opened against somebody else's repository.
 SEARCH = f"is:pr is:merged author:{AUTHOR} -user:{AUTHOR}"
@@ -313,6 +320,33 @@ def row(pr, tail=""):
             + tail + '<br clear="all"></div>')
 
 
+def featured(items, by_key):
+    """The Featured block: a bold title linked to the first pull request, the
+    repository it went into, and a few sentences on what was built. What to say is a choice, so it lives in
+    featured.json; the pull requests are only looked up, to link the first and
+    to warn about one that is not a fetched merged pull request (not merged, or
+    past LIMIT). A missing one is skipped rather than failing the refresh, and
+    an item whose first pull request is missing is left out."""
+    chunks = []
+    for item in items:
+        found = []
+        for number in item["prs"]:
+            pr = by_key.get((item["repo"], number))
+            if pr is None:
+                print(f"featured: {item['repo']}#{number} is not a fetched "
+                      f"merged pull request; skipping it", file=sys.stderr)
+            else:
+                found.append(pr)
+        if found and found[0]["number"] == item["prs"][0]:
+            # <br> and the text on one line: a newline after <br> would
+            # make a second break.
+            repo = item["repo"]
+            chunks.append(f'**[{item["title"]}]({found[0]["url"]})**'
+                          f'&nbsp;&nbsp;[`{repo}`](https://github.com/{repo})<br>'
+                          f'{item["text"]}')
+    return "\n\n".join(chunks)
+
+
 def sync_dir(subdir, wanted):
     """Write the SVGs wanted in subdir and delete the ones it no longer wants."""
     out = ROOT / subdir
@@ -390,6 +424,10 @@ def render(prs, total):
     return "\n\n".join(chunks), titles
 
 
+def block_pattern(start, end):
+    return re.compile(f"{re.escape(start)}.*?{re.escape(end)}", re.S)
+
+
 def main():
     prs, total = fetch()
     if not prs:
@@ -398,27 +436,38 @@ def main():
         return 1
 
     text = README.read_text(encoding="utf-8")
-    pattern = re.compile(f"{re.escape(START)}.*?{re.escape(END)}", re.S)
-    current = pattern.search(text)
-    if not current:
-        print(f"markers {START} / {END} not found in README.md", file=sys.stderr)
-        return 1
+    os_pattern = block_pattern(START, END)
+    feat_pattern = block_pattern(FEAT_START, FEAT_END)
+    for pattern, start, end in ((os_pattern, START, END),
+                                (feat_pattern, FEAT_START, FEAT_END)):
+        if not pattern.search(text):
+            print(f"markers {start} / {end} not found in README.md",
+                  file=sys.stderr)
+            return 1
 
+    by_key = {(pr["repository"]["nameWithOwner"], pr["number"]): pr
+              for pr in prs}
+    feat_body = featured(json.loads(FEATURED.read_text(encoding="utf-8")),
+                         by_key)
     body, titles = render(prs, total)
-    block = f"{START}\n{body}\n{END}"
-
-    # Star counts drift on their own, with no work from us. Left alone that
-    # would commit a new README most days just to move ★9.6k to ★9.7k, so a
-    # block that differs only in stars is treated as no change at all; stars
-    # ride along the next time a pull request actually changes.
-    if STARS.sub("★", current.group()) == STARS.sub("★", block):
-        print("no pull request changes (star drift ignored)")
-        return 0
+    os_block = f"{START}\n{body}\n{END}"
+    feat_block = f"{FEAT_START}\n{feat_body}\n{FEAT_END}"
 
     # lambda replacement: PR titles may contain backslashes, which re.sub would
     # otherwise interpret as escape sequences.
-    README.write_text(pattern.sub(lambda _: block, text), encoding="utf-8")
-    sync_svgs(block, titles)
+    new = os_pattern.sub(lambda _: os_block, text)
+    new = feat_pattern.sub(lambda _: feat_block, new)
+
+    # Star counts drift on their own, with no work from us. Left alone that
+    # would commit a new README most days just to move ★9.6k to ★9.7k, so a
+    # README that differs only in stars is treated as no change at all; stars
+    # ride along the next time a pull request actually changes.
+    if STARS.sub("★", new) == STARS.sub("★", text):
+        print("no pull request changes (star drift ignored)")
+        return 0
+
+    README.write_text(new, encoding="utf-8")
+    sync_svgs(os_block, titles)
     print(f"rendered {len(prs)} of {total} pull requests")
     return 0
 
