@@ -15,5 +15,5 @@ text { font-family: ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Libera
 <text class="o" x="0" y="12" textLength="81" lengthAdjust="spacing">roboflow/</text>
 <text class="n" x="81" y="12" textLength="63" lengthAdjust="spacing">rf-detr</text>
 <polygon class="s" points="158.50,0.10 159.96,4.59 164.68,4.59 160.86,7.37 162.32,11.86 158.50,9.08 154.68,11.86 156.14,7.37 152.32,4.59 157.04,4.59"/>
-<text class="c m" x="169" y="12">9.7k</text>
+<text class="c m" x="169" y="12">9.8k</text>
 </svg>
