@@ -85,16 +85,33 @@ BLANK_URL = f"https://raw.githubusercontent.com/{AUTHOR}/{AUTHOR}/main/{BLANK}"
 # the next title instead: the title is two images, and a narrow screen puts the
 # second on a line of its own.
 GROUP_GAP = 23  # blank space between a group's last line and the next title
-GAP = "assets/gap.svg"
+
+
+def strut(height):
+    """A transparent image of no width that makes its line height tall: its top
+    sits on the top of the line (align="top"), so the rest of it is space below
+    the text. No width, so it never needs room at the end of a full line. The
+    SVG itself must be zero wide: GitHub sizes images with height: auto, so a
+    file one pixel wide drawn at width 0 comes out 0 tall. Named by its
+    height, the only thing that can change in it."""
+    path = f"assets/strut-{height}.svg"
+    svg = f'<svg xmlns="http://www.w3.org/2000/svg" width="0" height="{height}"/>\n'
+    img = f'<img src="{path}" align="top" width="0" height="{height}" alt="">'
+    return path, svg, img
+
+
 GAP_H = LINE_H + GROUP_GAP
-GAP_SVG = f'<svg xmlns="http://www.w3.org/2000/svg" width="1" height="{GAP_H}"/>\n'
-GAP_IMG = f'<img src="{GAP}" align="top" width="1" height="{GAP_H}" alt="">'
+GAP, GAP_SVG, GAP_IMG = strut(GAP_H)
 
 # A row's stats: as tall as a line of text plus a few px, which is the space
 # between two rows. Both layouts put the image's top on the
 # top of its line (align="top"), so digits on the same baseline as the text
 # are level with it whichever layout is shown.
 ROW_H = LINE_H + 4
+# The same space, for the last line of a row whatever the layout: the floated
+# stats sit on the first line and do not stretch it, so a title that wraps
+# would otherwise end on a line of plain LINE_H.
+ROW_STRUT, ROW_STRUT_SVG, ROW_STRUT_IMG = strut(ROW_H)
 ROW_BASE = 15.5
 DIFF_SVG = re.compile(rf"{DIFF_DIR}/(\d+)-(\d+)\.[0-9a-f]{{8}}\.svg")
 
@@ -329,7 +346,8 @@ def row(pr, tail=""):
     src = f'{DIFF_DIR}/{diff_name(pr["additions"], pr["deletions"])}'
     flow, float_ = stats(src, f'{pr["url"]}/files',
                          f'+{pr["additions"]} −{pr["deletions"]}')
-    return f'<div>{float_}{head}{BREAK}{flow}{tail}<br clear="all"></div>'
+    return (f'<div>{float_}{head}{BREAK}{flow}{tail or ROW_STRUT_IMG}'
+            '<br clear="all"></div>')
 
 
 def featured(items, by_key):
@@ -380,6 +398,7 @@ def sync_svgs(block, titles):
     sync_dir(REPO_DIR, titles)
     (ROOT / BLANK).write_text(BLANK_SVG, encoding="utf-8")
     (ROOT / GAP).write_text(GAP_SVG, encoding="utf-8")
+    (ROOT / ROW_STRUT).write_text(ROW_STRUT_SVG, encoding="utf-8")
 
 
 def repo_url(repo):
