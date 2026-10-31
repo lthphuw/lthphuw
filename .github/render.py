@@ -48,6 +48,13 @@ LINE_H = 21
 # space can break, so a wrapped line ends on a bar instead of starting with one.
 SEP = "&nbsp;&nbsp;|&nbsp; "
 
+# Between a line's text and its stats: a zero-width space, so the break is
+# there but takes no room. A real space would: on a line the text fills exactly,
+# the space and the blank image after it (see stats()) wrap to a second, empty
+# line. The gap the space used to leave is drawn into the stats SVGs instead.
+BREAK = "&#8203;"
+PAD = 4  # px of empty space at the left of every stats SVG
+
 # Any rendered star count, used to compare two blocks while ignoring stars.
 STARS = re.compile(r"★[\d.]+k?")
 
@@ -65,11 +72,12 @@ TITLE_SIZE = 15
 # window (see stats()). At or above WIDE the stats float to the right edge of
 # the line; below it they flow after the text and wrap to the start of a line.
 WIDE = 601
-# 1x1 and transparent: shown in place of the copy that does not belong to the
-# current layout. Absolute, because a relative srcset is not known to be
+# 0x0 and transparent: shown in place of the copy that does not belong to the
+# current layout. Zero rather than one pixel, so that it never needs room at
+# the end of a full line. Absolute, because a relative srcset is not known to be
 # rewritten the way src is.
 BLANK = "assets/blank.svg"
-BLANK_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>\n'
+BLANK_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0"/>\n'
 BLANK_URL = f"https://raw.githubusercontent.com/{AUTHOR}/{AUTHOR}/main/{BLANK}"
 # The space between two groups. A line is never shorter than LINE_H, so an image
 # taller than that, sitting at the end of the last line of a group, stretches
@@ -185,7 +193,7 @@ def diff_svg(additions, deletions):
     added, removed = f"+{additions}", f"−{deletions}"
     char = 0.6 * SIZE
     wa, wr = len(added) * char, len(removed) * char
-    width = math.ceil(wa + char + wr)
+    width = math.ceil(PAD + wa + char + wr)
     return f"""\
 <svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{ROW_H}" \
 viewBox="0 0 {width} {ROW_H}">
@@ -193,9 +201,9 @@ viewBox="0 0 {width} {ROW_H}">
 text {{ font: 500 {SIZE}px {MONO}; }}
 {COLOURS}
 </style>
-<text class="a" x="0" y="{ROW_BASE:g}" textLength="{wa:g}" \
+<text class="a" x="{PAD}" y="{ROW_BASE:g}" textLength="{wa:g}" \
 lengthAdjust="spacing">{added}</text>
-<text class="d" x="{wa + char:g}" y="{ROW_BASE:g}" textLength="{wr:g}" \
+<text class="d" x="{PAD + wa + char:g}" y="{ROW_BASE:g}" textLength="{wr:g}" \
 lengthAdjust="spacing">{removed}</text>
 </svg>
 """
@@ -263,7 +271,7 @@ def title_right(merged, additions, deletions):
     chars = len(words) + 1 + len(added) + 1 + len(removed)
     # Computed widths only size the image; the text is anchored to its right
     # edge, so a font that runs a little wide or narrow cannot move that edge.
-    width = math.ceil(chars * char + 2 * BAR_GAP + 2)
+    width = math.ceil(PAD + chars * char + 2 * BAR_GAP + 2)
     height = TITLE_HEIGHT
     return f"""\
 <svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}">
@@ -302,7 +310,7 @@ def title(repo, star, merged, additions, deletions):
     line = (
         f'<div>{float_}<a href="https://github.com/{repo}">'
         f'<img src="{REPO_DIR}/{left_name}" align="top" width="{lw}" '
-        f'height="{lh}" alt="{repo}, ★{star}"></a> {flow}'
+        f'height="{lh}" alt="{repo}, ★{star}"></a>{BREAK}{flow}'
         '<br clear="all"></div>'
     )
     return line, {left_name: left, right_name: right}
@@ -321,7 +329,7 @@ def row(pr, tail=""):
     src = f'{DIFF_DIR}/{diff_name(pr["additions"], pr["deletions"])}'
     flow, float_ = stats(src, f'{pr["url"]}/files',
                          f'+{pr["additions"]} −{pr["deletions"]}')
-    return f'<div>{float_}{head} {flow}{tail}<br clear="all"></div>'
+    return f'<div>{float_}{head}{BREAK}{flow}{tail}<br clear="all"></div>'
 
 
 def featured(items, by_key):
