@@ -38,7 +38,7 @@ SEARCH = f"is:pr is:merged author:{AUTHOR} -user:{AUTHOR}"
 LIMIT = 100
 # Pull requests listed per repository; the rest collapse into a "+N more" link
 # that belongs to that repository.
-SHOW = 5
+SHOW = 3
 
 # One line of the profile text on GitHub: 14px at a line-height of 1.5. Every
 # vertical size below is a multiple or a small offset of it.
@@ -322,11 +322,12 @@ def row(pr, tail=""):
 
 def featured(items, by_key):
     """The Featured block: a bold title linked to the first pull request, the
-    repository it went into, and a few sentences on what was built. What to say is a choice, so it lives in
-    featured.json; the pull requests are only looked up, to link the first and
-    to warn about one that is not a fetched merged pull request (not merged, or
-    past LIMIT). A missing one is skipped rather than failing the refresh, and
-    an item whose first pull request is missing is left out."""
+    repository it went into, a sentence or two on what was built, and a line
+    linking every pull request of the item. What to say is a choice, so it
+    lives in featured.json; the pull requests are only looked up, to link them
+    and to warn about one that is not a fetched merged pull request (not
+    merged, or past LIMIT). A missing one is skipped rather than failing the
+    refresh, and an item whose first pull request is missing is left out."""
     chunks = []
     for item in items:
         found = []
@@ -341,9 +342,11 @@ def featured(items, by_key):
             # <br> and the text on one line: a newline after <br> would
             # make a second break.
             repo = item["repo"]
+            links = " · ".join(f'[`#{pr["number"]}`]({pr["url"]})'
+                               for pr in found)
             chunks.append(f'**[{item["title"]}]({found[0]["url"]})**'
                           f'&nbsp;&nbsp;[`{repo}`](https://github.com/{repo})<br>'
-                          f'{item["text"]}')
+                          f'{item["text"]}<br>{links}')
     return "\n\n".join(chunks)
 
 
