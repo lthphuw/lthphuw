@@ -165,13 +165,18 @@ def stats(src, url, alt):
     The first copy flows with the text, so when there is no room it wraps to
     the start of a line. The second floats right. Each is swapped for a blank
     image in the window width where it does not belong, so only one shows. The
-    link matters: an unlinked image on GitHub opens the image itself."""
+    link matters: an unlinked image on GitHub opens the image itself.
+
+    Returned apart, because they go at opposite ends of the line: the floated
+    copy before the text, so a long line wraps short of it. Placed after a
+    line that fills the width, a float has no room left on it and drops to a
+    line of its own."""
     flow = (f'<picture><source media="(min-width: {WIDE}px)" srcset="{BLANK_URL}">'
             f'<img src="{src}" align="top" alt="{alt}"></picture>')
     float_ = (f'<picture><source media="(max-width: {WIDE - 1}px)" '
               f'srcset="{BLANK_URL}"><img src="{src}" align="right" alt="{alt}">'
               f'</picture>')
-    return f'<a href="{url}">{flow}</a><a href="{url}">{float_}</a>'
+    return f'<a href="{url}">{flow}</a>', f'<a href="{url}">{float_}</a>'
 
 
 def diff_svg(additions, deletions):
@@ -292,13 +297,13 @@ def title(repo, star, merged, additions, deletions):
     # a floated copy. A <div> rather than Markdown: a paragraph gets a 16px
     # bottom margin from GitHub, a div gets none, so the gap to the first row
     # is the one chosen above. Markdown is not parsed inside it, hence anchors.
+    flow, float_ = stats(f"{REPO_DIR}/{right_name}", repo_url(repo),
+                         f"{merged} merged | +{additions} −{deletions}")
     line = (
-        f'<div><a href="https://github.com/{repo}">'
+        f'<div>{float_}<a href="https://github.com/{repo}">'
         f'<img src="{REPO_DIR}/{left_name}" align="top" width="{lw}" '
-        f'height="{lh}" alt="{repo}, ★{star}"></a> '
-        + stats(f"{REPO_DIR}/{right_name}", repo_url(repo),
-                f"{merged} merged | +{additions} −{deletions}")
-        + '<br clear="all"></div>'
+        f'height="{lh}" alt="{repo}, ★{star}"></a> {flow}'
+        '<br clear="all"></div>'
     )
     return line, {left_name: left, right_name: right}
 
@@ -314,10 +319,9 @@ def row(pr, tail=""):
     head = (f'<a href="{pr["url"]}"><code>#{pr["number"]}</code></a>'
             f'{SEP}{inline_code(pr["title"])}')
     src = f'{DIFF_DIR}/{diff_name(pr["additions"], pr["deletions"])}'
-    return (f'<div>{head} '
-            + stats(src, f'{pr["url"]}/files',
-                    f'+{pr["additions"]} −{pr["deletions"]}')
-            + tail + '<br clear="all"></div>')
+    flow, float_ = stats(src, f'{pr["url"]}/files',
+                         f'+{pr["additions"]} −{pr["deletions"]}')
+    return f'<div>{float_}{head} {flow}{tail}<br clear="all"></div>'
 
 
 def featured(items, by_key):
