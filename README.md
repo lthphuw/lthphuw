@@ -11,11 +11,11 @@ I'm **Phu**. I work on computer vision and build the systems around it.
 ### Contributions
 
 <!-- os:start -->
-**[roboflow/rf-detr](https://github.com/roboflow/rf-detr)** ★9.9k · [30 merged](https://github.com/roboflow/rf-detr/pulls?q=is%3Apr+is%3Amerged+author%3Althphuw) · +31979 −5533<br>
+**[roboflow/rf-detr](https://github.com/roboflow/rf-detr)** ★10.2k · [32 merged](https://github.com/roboflow/rf-detr/pulls?q=is%3Apr+is%3Amerged+author%3Althphuw) · +32288 −5566<br>
+[`#1754`](https://github.com/roboflow/rf-detr/pull/1754)&nbsp;&nbsp;|&nbsp; perf(export): skip `decode_detections` debug stats when DEBUG is off<br>
+[`#1751`](https://github.com/roboflow/rf-detr/pull/1751)&nbsp;&nbsp;|&nbsp; fix(export): name a CoreML export with an `FP16ComputePrecision` transform `fp16`<br>
 [`#1645`](https://github.com/roboflow/rf-detr/pull/1645)&nbsp;&nbsp;|&nbsp; perf(export): smooth the backbone norms and correct the MLP biases of TensorRT INT8 detection engines<br>
-[`#1642`](https://github.com/roboflow/rf-detr/pull/1642)&nbsp;&nbsp;|&nbsp; perf(export): run the segmentation and keypoint INT8 patch embedding as a matrix multiply<br>
-[`#1635`](https://github.com/roboflow/rf-detr/pull/1635)&nbsp;&nbsp;|&nbsp; feat(models): accept one `threshold` per class in `predict`<br>
-[+27 more →](https://github.com/roboflow/rf-detr/pulls?q=is%3Apr+is%3Amerged+author%3Althphuw)
+[+29 more →](https://github.com/roboflow/rf-detr/pulls?q=is%3Apr+is%3Amerged+author%3Althphuw)
 
 **[roboflow/trackers](https://github.com/roboflow/trackers)** ★4k · [2 merged](https://github.com/roboflow/trackers/pulls?q=is%3Apr+is%3Amerged+author%3Althphuw) · +239 −8<br>
 [`#614`](https://github.com/roboflow/trackers/pull/614)&nbsp;&nbsp;|&nbsp; fix(ocsort): encode ORU virtual boxes with `bbox_to_measurement` for XCYCWH<br>
